@@ -8,15 +8,21 @@ function formatSpeed(mbps) {
 }
 
 export default function Progress() {
-  const { status, progress, speed, transferredFileName, role, reset } = usePeer()
+  const { status, progress, speed, transferredFileName, role, errorMsg, cancelTransfer, reset } = usePeer()
   const navigate = useNavigate()
 
-  const isDone  = status === 'done'
-  const isError = status === 'error'
+  const isDone         = status === 'done'
+  const isError        = status === 'error'
+  const isTransferring = status === 'transferring'
 
   const handleDone = () => {
     reset()
     navigate('/')
+  }
+
+  const handleCancel = () => {
+    cancelTransfer()
+    navigate(role === 'sender' ? '/send' : '/receive')
   }
 
   return (
@@ -34,11 +40,11 @@ export default function Progress() {
             </div>
           </div>
           <div className="text-right">
-            <div className={`text-2xl font-bold tabular-nums ${isDone ? 'text-emerald-400' : 'text-indigo-400'}`}>
+            <div className={`text-2xl font-bold tabular-nums ${isDone ? 'text-emerald-400' : isError ? 'text-red-400' : 'text-indigo-400'}`}>
               {isDone ? '100%' : `${progress}%`}
             </div>
             <div className="text-xs text-gray-500">
-              {isDone ? 'Complete' : 'In progress'}
+              {isDone ? 'Complete' : isError ? 'Aborted' : 'In progress'}
             </div>
           </div>
         </div>
@@ -46,13 +52,13 @@ export default function Progress() {
         {/* Progress Bar */}
         <div className="w-full h-3 bg-white/6 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-300 ${isDone ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+            className={`h-full rounded-full transition-all duration-300 ${isDone ? 'bg-emerald-500' : isError ? 'bg-red-500' : 'bg-indigo-500'}`}
             style={{ width: `${isDone ? 100 : progress}%` }}
           />
         </div>
 
         {/* Stats */}
-        {!isDone && (
+        {isTransferring && (
           <div className="mt-5 grid grid-cols-2 gap-4">
             <div className="p-3 rounded-lg bg-white/3 border border-white/6">
               <div className="text-xs text-gray-400 mb-1">Speed</div>
@@ -86,11 +92,45 @@ export default function Progress() {
           </div>
         )}
 
-        {/* Transferring animation */}
-        {!isDone && !isError && (
-          <div className="mt-6 flex items-center gap-2 text-sm text-gray-400">
-            <span className="inline-block w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
-            {role === 'sender' ? 'Sending chunks…' : 'Receiving chunks…'}
+        {/* Error / Cancelled State */}
+        {isError && (
+          <div className="mt-6 text-center space-y-4">
+            <div className="text-5xl">🛑</div>
+            <div className="text-red-400 font-semibold">Transfer Aborted</div>
+            <p className="text-sm text-gray-400">
+              {errorMsg || 'The transfer was cancelled.'}
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => { reset(); navigate('/') }}
+                className="btn bg-white/6 hover:bg-white/10"
+              >
+                Home
+              </button>
+              <button
+                onClick={() => { reset(); navigate(role === 'sender' ? '/send' : '/receive') }}
+                className="btn bg-indigo-600 hover:bg-indigo-500"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Transferring — live indicators + Cancel button */}
+        {isTransferring && (
+          <div className="mt-6 space-y-4">
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <span className="inline-block w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
+              {role === 'sender' ? 'Sending chunks…' : 'Receiving chunks…'}
+            </div>
+
+            <button
+              onClick={handleCancel}
+              className="w-full py-3 rounded-xl font-semibold text-sm border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-400/60 transition-all duration-200"
+            >
+              🛑 Cancel Transfer
+            </button>
           </div>
         )}
       </div>
