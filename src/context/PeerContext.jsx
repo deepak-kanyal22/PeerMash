@@ -19,8 +19,8 @@ function makeRoomId() {
 
 export function PeerProvider({ children }) {
   const [roomId, setRoomId]                   = useState('')
-  const [status, setStatus]                   = useState('idle')
-  // idle | waiting | connecting | pending | transferring | done | error
+  const [status, setStatusState]              = useState('idle')
+  // idle | waiting | connecting | pending | transferring | done | error | cancelled
   const [progress, setProgress]               = useState(0)
   const [speed, setSpeed]                     = useState(0)
   const [selectedFile, setSelectedFileState]  = useState(null)
@@ -30,6 +30,7 @@ export function PeerProvider({ children }) {
   const [errorMsg, setErrorMsg]               = useState('')
 
   // Refs — safe to read inside async callbacks without stale closure issues
+  const statusRef         = useRef('idle')
   const peerRef           = useRef(null)
   const fileRef           = useRef(null)
   const fileNameRef       = useRef('')
@@ -38,6 +39,17 @@ export function PeerProvider({ children }) {
   const totalChunksRef    = useRef(0)
   const bytesReceivedRef  = useRef(0)
   const connRef           = useRef(null) // keep conn alive for accept/reject
+
+  // Throttling and rolling speed refs
+  const totalBytesRef           = useRef(0)
+  const lastUpdateRef           = useRef(0)
+  const lastSpeedCalcTimeRef    = useRef(0)
+  const lastBytesTransferredRef  = useRef(0)
+
+  const setStatus = useCallback((newStatus) => {
+    statusRef.current = newStatus
+    setStatusState(newStatus)
+  }, [])
 
   /** Keep ref and state in sync so callbacks always see the latest file */
   const setSelectedFile = useCallback((file) => {
@@ -78,12 +90,29 @@ export function PeerProvider({ children }) {
 
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
     startTimeRef.current = Date.now()
+    lastUpdateRef.current = Date.now()
+    lastSpeedCalcTimeRef.current = Date.now()
+    lastBytesTransferredRef.current = 0
     let chunkIndex = 0
 
     const sendNext = () => {
+      // Check if connection is closed or cancelled
+      if (statusRef.current === 'cancelled' || statusRef.current === 'error' || !connRef.current) {
+        return
+      }
+
       if (chunkIndex >= totalChunks) {
-        conn.send({ type: 'done' })
-        setStatus('done')
+        try {
+          conn.send({ type: 'done' })
+          setStatus('done')
+        } catch (_) {}
+        return
+      }
+
+      // Check if dataChannel buffer is full (Backpressure handling)
+      const dc = conn.dataChannel || conn._dc
+      if (dc && dc.bufferedAmount > 1024 * 1024) { // 1 MB buffer threshold
+        setTimeout(sendNext, 50)
         return
       }
 
@@ -92,17 +121,41 @@ export function PeerProvider({ children }) {
       const reader = new FileReader()
 
       reader.onload = (e) => {
-        conn.send({ type: 'chunk', index: chunkIndex, data: e.target.result })
+        // Double check connection still open before sending
+        if (statusRef.current === 'cancelled' || statusRef.current === 'error' || !connRef.current) {
+          return
+        }
+
+        try {
+          conn.send({ type: 'chunk', index: chunkIndex, data: e.target.result })
+        } catch (err) {
+          setErrorMsg(err.message || 'Failed to send chunk.')
+          setStatus('error')
+          return
+        }
+
         chunkIndex++
 
-        const pct     = Math.round((chunkIndex / totalChunks) * 100)
-        const elapsed = (Date.now() - startTimeRef.current) / 1000 || 0.001
+        const pct       = Math.min(100, Math.round((chunkIndex / totalChunks) * 100))
         const bytesSent = Math.min(chunkIndex * CHUNK_SIZE, file.size)
-        const spd     = (bytesSent / elapsed / 1024 / 1024).toFixed(2)
+        const now       = Date.now()
+        const isLast    = chunkIndex >= totalChunks
 
-        setProgress(pct)
-        setSpeed(parseFloat(spd))
+        // Throttled UI State Dispatch
+        if (isLast || now - lastUpdateRef.current >= 500) {
+          const elapsed = (now - lastSpeedCalcTimeRef.current) / 1000 || 0.001
+          const bytesDiff = bytesSent - lastBytesTransferredRef.current
+          const spd = Math.max(0, bytesDiff / elapsed / 1024 / 1024) // MB/s
 
+          setProgress(pct)
+          setSpeed(parseFloat(spd.toFixed(2)))
+
+          lastUpdateRef.current = now
+          lastSpeedCalcTimeRef.current = now
+          lastBytesTransferredRef.current = bytesSent
+        }
+
+        // Yield execution to prevent UI lockup
         setTimeout(sendNext, 0)
       }
 
@@ -132,31 +185,47 @@ export function PeerProvider({ children }) {
     peerRef.current = peer
 
     peer.on('connection', (conn) => {
+      connRef.current = conn
       setStatus('connecting')
+
       conn.on('open', () => {
         // Send file metadata — receiver will decide to accept or reject
         sendMetaOverConn(conn)
       })
+
       conn.on('data', (msg) => {
         if (msg.type === 'accepted') {
           setStatus('transferring')
           sendChunksOverConn(conn)
         } else if (msg.type === 'rejected') {
-          setErrorMsg('The receiver declined the file transfer.')
-          setStatus('error')
+          setErrorMsg('Transfer Rejected')
+          destroyPeer()
+          setStatus('cancelled')
         } else if (msg.type === 'cancelled') {
-          setErrorMsg('The receiver cancelled the transfer.')
+          setErrorMsg('Transfer Cancelled')
+          destroyPeer()
+          setStatus('cancelled')
+        }
+      })
+
+      conn.on('close', () => {
+        if (connRef.current === conn) {
+          connRef.current = null
+        }
+        if (statusRef.current !== 'done' && statusRef.current !== 'cancelled') {
+          setErrorMsg('Connection lost.')
           setStatus('error')
         }
       })
+
       conn.on('error', (err) => {
-        setErrorMsg(err.message)
+        setErrorMsg(err.message || 'Connection error occurred.')
         setStatus('error')
       })
     })
 
     peer.on('error', (err) => {
-      setErrorMsg(err.message)
+      setErrorMsg(err.message || 'Peer initialization error.')
       setStatus('error')
     })
   }, [sendMetaOverConn, sendChunksOverConn])
@@ -184,31 +253,48 @@ export function PeerProvider({ children }) {
       connRef.current = conn
 
       conn.on('open', () => {
-        // Connected — now wait for metadata
         setStatus('connected')
       })
 
       conn.on('data', (msg) => {
         if (msg.type === 'meta') {
-          // Pause here — show the Accept/Reject prompt
-          fileNameRef.current     = msg.name
-          totalChunksRef.current  = msg.totalChunks
-          chunksRef.current       = new Array(msg.totalChunks)
+          fileNameRef.current      = msg.name
+          totalChunksRef.current   = msg.totalChunks
+          totalBytesRef.current    = msg.size
+          chunksRef.current        = new Array(msg.totalChunks)
           bytesReceivedRef.current = 0
           setPendingMeta({ name: msg.name, size: msg.size, totalChunks: msg.totalChunks })
           setStatus('pending')
 
         } else if (msg.type === 'chunk') {
+          if (statusRef.current !== 'transferring') {
+            setStatus('transferring')
+            startTimeRef.current = Date.now()
+            lastUpdateRef.current = Date.now()
+            lastSpeedCalcTimeRef.current = Date.now()
+            lastBytesTransferredRef.current = 0
+          }
+
           chunksRef.current[msg.index]  = msg.data
           bytesReceivedRef.current      += msg.data.byteLength
 
           const received = msg.index + 1
-          const pct      = Math.round((received / totalChunksRef.current) * 100)
-          const elapsed  = (Date.now() - startTimeRef.current) / 1000 || 0.001
-          const spd      = (bytesReceivedRef.current / elapsed / 1024 / 1024).toFixed(2)
+          const pct      = Math.min(100, Math.round((bytesReceivedRef.current / totalBytesRef.current) * 100))
+          const now      = Date.now()
+          const isLast   = received >= totalChunksRef.current
 
-          setProgress(pct)
-          setSpeed(parseFloat(spd))
+          if (isLast || now - lastUpdateRef.current >= 500) {
+            const elapsed = (now - lastSpeedCalcTimeRef.current) / 1000 || 0.001
+            const bytesDiff = bytesReceivedRef.current - lastBytesTransferredRef.current
+            const spd = Math.max(0, bytesDiff / elapsed / 1024 / 1024)
+
+            setProgress(pct)
+            setSpeed(parseFloat(spd.toFixed(2)))
+
+            lastUpdateRef.current = now
+            lastSpeedCalcTimeRef.current = now
+            lastBytesTransferredRef.current = bytesReceivedRef.current
+          }
 
         } else if (msg.type === 'done') {
           const blob = new Blob(chunksRef.current)
@@ -221,21 +307,32 @@ export function PeerProvider({ children }) {
           document.body.removeChild(a)
           URL.revokeObjectURL(url)
           setStatus('done')
+
         } else if (msg.type === 'cancelled') {
-          setErrorMsg('The sender cancelled the transfer.')
+          setErrorMsg('Transfer Cancelled')
           destroyPeer()
+          setStatus('cancelled')
+        }
+      })
+
+      conn.on('close', () => {
+        if (connRef.current === conn) {
+          connRef.current = null
+        }
+        if (statusRef.current !== 'done' && statusRef.current !== 'cancelled') {
+          setErrorMsg('Connection lost.')
           setStatus('error')
         }
       })
 
       conn.on('error', (err) => {
-        setErrorMsg(err.message)
+        setErrorMsg(err.message || 'Connection error occurred.')
         setStatus('error')
       })
     })
 
     peer.on('error', (err) => {
-      setErrorMsg(err.message)
+      setErrorMsg(err.message || 'Peer connection error.')
       setStatus('error')
     })
   }, [])
@@ -248,6 +345,9 @@ export function PeerProvider({ children }) {
     connRef.current.send({ type: 'accepted' })
     setTransferredFileName(fileNameRef.current)
     startTimeRef.current = Date.now()
+    lastUpdateRef.current = Date.now()
+    lastSpeedCalcTimeRef.current = Date.now()
+    lastBytesTransferredRef.current = 0
     setPendingMeta(null)
     setStatus('transferring')
   }, [])
@@ -257,7 +357,7 @@ export function PeerProvider({ children }) {
    */
   const rejectTransfer = useCallback(() => {
     if (connRef.current) {
-      connRef.current.send({ type: 'rejected' })
+      try { connRef.current.send({ type: 'rejected' }) } catch (_) {}
       connRef.current.close()
       connRef.current = null
     }
@@ -273,25 +373,14 @@ export function PeerProvider({ children }) {
    * and reset back to idle.
    */
   const cancelTransfer = useCallback(() => {
-    // Try to send a cancellation signal before destroying
     if (connRef.current) {
       try { connRef.current.send({ type: 'cancelled' }) } catch (_) {}
       connRef.current.close()
       connRef.current = null
     }
     destroyPeer()
-    setRoomId('')
-    setStatus('idle')
-    setProgress(0)
-    setSpeed(0)
-    setSelectedFileState(null)
-    fileRef.current = null
-    setTransferredFileName('')
-    setRole(null)
-    setErrorMsg('')
-    setPendingMeta(null)
-    chunksRef.current        = []
-    bytesReceivedRef.current = 0
+    setErrorMsg('Transfer Cancelled')
+    setStatus('cancelled')
   }, [])
 
   /** Reset everything back to idle */
