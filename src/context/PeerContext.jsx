@@ -20,11 +20,12 @@ function makeRoomId() {
 export function PeerProvider({ children }) {
   const [roomId, setRoomId]                   = useState('')
   const [status, setStatus]                   = useState('idle')
-  // idle | waiting | connecting | transferring | done | error
+  // idle | waiting | connecting | pending | transferring | done | error
   const [progress, setProgress]               = useState(0)
   const [speed, setSpeed]                     = useState(0)
   const [selectedFile, setSelectedFileState]  = useState(null)
   const [transferredFileName, setTransferredFileName] = useState('')
+  const [pendingMeta, setPendingMeta]         = useState(null) // { name, size, totalChunks }
   const [role, setRole]                       = useState(null) // 'sender' | 'receiver'
   const [errorMsg, setErrorMsg]               = useState('')
 
@@ -36,6 +37,7 @@ export function PeerProvider({ children }) {
   const chunksRef         = useRef([])
   const totalChunksRef    = useRef(0)
   const bytesReceivedRef  = useRef(0)
+  const connRef           = useRef(null) // keep conn alive for accept/reject
 
   /** Keep ref and state in sync so callbacks always see the latest file */
   const setSelectedFile = useCallback((file) => {
@@ -52,8 +54,8 @@ export function PeerProvider({ children }) {
 
   // ─── SENDER HELPERS ───────────────────────────────────────────────────────
 
-  /** Read + send file in 64 KB chunks over an open DataConnection */
-  const sendFileOverConn = useCallback((conn) => {
+  /** Send only metadata first — wait for receiver to accept before streaming chunks */
+  const sendMetaOverConn = useCallback((conn) => {
     const file = fileRef.current
     if (!file) {
       setErrorMsg('No file selected. Please pick a file before generating a room.')
@@ -61,14 +63,22 @@ export function PeerProvider({ children }) {
       return
     }
 
+    setTransferredFileName(file.name)
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
+
+    // Send metadata — receiver will show Accept/Reject prompt
+    conn.send({ type: 'meta', name: file.name, size: file.size, totalChunks })
+    setStatus('awaiting_approval')
+  }, [])
+
+  /** Stream file chunks once receiver has accepted */
+  const sendChunksOverConn = useCallback((conn) => {
+    const file = fileRef.current
+    if (!file) return
+
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
     startTimeRef.current = Date.now()
     let chunkIndex = 0
-
-    setTransferredFileName(file.name)
-
-    // 1. Send metadata so receiver knows filename, size, chunk count
-    conn.send({ type: 'meta', name: file.name, size: file.size, totalChunks })
 
     const sendNext = () => {
       if (chunkIndex >= totalChunks) {
@@ -85,7 +95,6 @@ export function PeerProvider({ children }) {
         conn.send({ type: 'chunk', index: chunkIndex, data: e.target.result })
         chunkIndex++
 
-        // Update progress & speed
         const pct     = Math.round((chunkIndex / totalChunks) * 100)
         const elapsed = (Date.now() - startTimeRef.current) / 1000 || 0.001
         const bytesSent = Math.min(chunkIndex * CHUNK_SIZE, file.size)
@@ -94,7 +103,6 @@ export function PeerProvider({ children }) {
         setProgress(pct)
         setSpeed(parseFloat(spd))
 
-        // Yield to event loop so the UI stays responsive
         setTimeout(sendNext, 0)
       }
 
@@ -108,7 +116,7 @@ export function PeerProvider({ children }) {
 
   /**
    * SENDER — Create a Peer with the generated Room ID and wait for receiver
-   * to connect; once connected, start sending the file automatically.
+   * to connect; send metadata, then wait for Accept/Reject from receiver.
    */
   const generateRoom = useCallback(() => {
     destroyPeer()
@@ -126,8 +134,20 @@ export function PeerProvider({ children }) {
     peer.on('connection', (conn) => {
       setStatus('connecting')
       conn.on('open', () => {
-        setStatus('transferring')
-        sendFileOverConn(conn)
+        // Send file metadata — receiver will decide to accept or reject
+        sendMetaOverConn(conn)
+      })
+      conn.on('data', (msg) => {
+        if (msg.type === 'accepted') {
+          setStatus('transferring')
+          sendChunksOverConn(conn)
+        } else if (msg.type === 'rejected') {
+          setErrorMsg('The receiver declined the file transfer.')
+          setStatus('error')
+        } else if (msg.type === 'cancelled') {
+          setErrorMsg('The receiver cancelled the transfer.')
+          setStatus('error')
+        }
       })
       conn.on('error', (err) => {
         setErrorMsg(err.message)
@@ -139,11 +159,11 @@ export function PeerProvider({ children }) {
       setErrorMsg(err.message)
       setStatus('error')
     })
-  }, [sendFileOverConn])
+  }, [sendMetaOverConn, sendChunksOverConn])
 
   /**
-   * RECEIVER — Connect to a sender's Room ID, receive chunks, reassemble
-   * the file, and trigger a browser download when complete.
+   * RECEIVER — Connect to a sender's Room ID. When the sender's metadata
+   * arrives, we pause at 'pending' status and wait for user to accept/reject.
    */
   const connectToRoom = useCallback((targetId) => {
     destroyPeer()
@@ -151,8 +171,9 @@ export function PeerProvider({ children }) {
     setProgress(0)
     setSpeed(0)
     setErrorMsg('')
+    setPendingMeta(null)
     setRole('receiver')
-    chunksRef.current       = []
+    chunksRef.current        = []
     bytesReceivedRef.current = 0
 
     const peer = new Peer()
@@ -160,19 +181,22 @@ export function PeerProvider({ children }) {
 
     peer.on('open', () => {
       const conn = peer.connect(targetId.trim().toUpperCase(), { reliable: true })
+      connRef.current = conn
 
       conn.on('open', () => {
-        setStatus('transferring')
-        startTimeRef.current = Date.now()
+        // Connected — now wait for metadata
+        setStatus('connected')
       })
 
       conn.on('data', (msg) => {
         if (msg.type === 'meta') {
-          fileNameRef.current      = msg.name
-          setTransferredFileName(msg.name)
+          // Pause here — show the Accept/Reject prompt
+          fileNameRef.current     = msg.name
           totalChunksRef.current  = msg.totalChunks
           chunksRef.current       = new Array(msg.totalChunks)
           bytesReceivedRef.current = 0
+          setPendingMeta({ name: msg.name, size: msg.size, totalChunks: msg.totalChunks })
+          setStatus('pending')
 
         } else if (msg.type === 'chunk') {
           chunksRef.current[msg.index]  = msg.data
@@ -187,7 +211,6 @@ export function PeerProvider({ children }) {
           setSpeed(parseFloat(spd))
 
         } else if (msg.type === 'done') {
-          // Reassemble all chunks → Blob → auto-download
           const blob = new Blob(chunksRef.current)
           const url  = URL.createObjectURL(blob)
           const a    = document.createElement('a')
@@ -198,6 +221,10 @@ export function PeerProvider({ children }) {
           document.body.removeChild(a)
           URL.revokeObjectURL(url)
           setStatus('done')
+        } else if (msg.type === 'cancelled') {
+          setErrorMsg('The sender cancelled the transfer.')
+          destroyPeer()
+          setStatus('error')
         }
       })
 
@@ -213,6 +240,60 @@ export function PeerProvider({ children }) {
     })
   }, [])
 
+  /**
+   * RECEIVER — Accept the pending transfer. Notifies sender and starts receiving.
+   */
+  const acceptTransfer = useCallback(() => {
+    if (!connRef.current) return
+    connRef.current.send({ type: 'accepted' })
+    setTransferredFileName(fileNameRef.current)
+    startTimeRef.current = Date.now()
+    setPendingMeta(null)
+    setStatus('transferring')
+  }, [])
+
+  /**
+   * RECEIVER — Reject the pending transfer. Notifies sender and resets.
+   */
+  const rejectTransfer = useCallback(() => {
+    if (connRef.current) {
+      connRef.current.send({ type: 'rejected' })
+      connRef.current.close()
+      connRef.current = null
+    }
+    destroyPeer()
+    setPendingMeta(null)
+    setStatus('idle')
+    setProgress(0)
+    setErrorMsg('')
+  }, [])
+
+  /**
+   * Either side — Cancel an in-progress transfer, notify the other peer,
+   * and reset back to idle.
+   */
+  const cancelTransfer = useCallback(() => {
+    // Try to send a cancellation signal before destroying
+    if (connRef.current) {
+      try { connRef.current.send({ type: 'cancelled' }) } catch (_) {}
+      connRef.current.close()
+      connRef.current = null
+    }
+    destroyPeer()
+    setRoomId('')
+    setStatus('idle')
+    setProgress(0)
+    setSpeed(0)
+    setSelectedFileState(null)
+    fileRef.current = null
+    setTransferredFileName('')
+    setRole(null)
+    setErrorMsg('')
+    setPendingMeta(null)
+    chunksRef.current        = []
+    bytesReceivedRef.current = 0
+  }, [])
+
   /** Reset everything back to idle */
   const reset = useCallback(() => {
     destroyPeer()
@@ -225,6 +306,8 @@ export function PeerProvider({ children }) {
     setTransferredFileName('')
     setRole(null)
     setErrorMsg('')
+    setPendingMeta(null)
+    connRef.current          = null
     chunksRef.current        = []
     bytesReceivedRef.current = 0
   }, [])
@@ -232,8 +315,8 @@ export function PeerProvider({ children }) {
   return (
     <PeerContext.Provider value={{
       roomId, status, progress, speed,
-      selectedFile, transferredFileName, role, errorMsg,
-      setSelectedFile, generateRoom, connectToRoom, reset,
+      selectedFile, transferredFileName, pendingMeta, role, errorMsg,
+      setSelectedFile, generateRoom, connectToRoom, acceptTransfer, rejectTransfer, cancelTransfer, reset,
     }}>
       {children}
     </PeerContext.Provider>
