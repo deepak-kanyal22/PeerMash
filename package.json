@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "dev:all": "concurrently --names \"SIGNAL,VITE\" --prefix-colors \"cyan,magenta\" \"node server/index.js\" \"vite\"",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.0",
+    "concurrently": "^10.0.3",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
     "vite": "^5.0.0"

@@ -1,10 +1,23 @@
 import React, { createContext, useContext, useState, useRef, useCallback } from 'react'
 import Peer from 'peerjs'
+import { generateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encryptData, decryptData, decryptText } from '../crypto/e2ee'
 
 const PeerContext = createContext(null)
 
 // 64 KB chunks — small enough for data channel reliability
 const CHUNK_SIZE = 64 * 1024
+
+// ─── SIGNALING SERVER CONFIG ─────────────────────────────────────────────────
+// Reads from .env (VITE_PEER_HOST / VITE_PEER_PORT / VITE_PEER_PATH).
+// Falls back to the public PeerJS cloud server if env vars are not set.
+const PEER_SERVER = import.meta.env.VITE_PEER_HOST
+  ? {
+      host  : import.meta.env.VITE_PEER_HOST,
+      port  : Number(import.meta.env.VITE_PEER_PORT) || 9000,
+      path  : import.meta.env.VITE_PEER_PATH  || '/peerjs',
+      secure: import.meta.env.VITE_PEER_SECURE === 'true', // set to 'true' for HTTPS/WSS in prod
+    }
+  : undefined // undefined = default PeerJS cloud server
 
 // Generate a readable XXXX-XXXX style Room ID
 function makeRoomId() {
@@ -28,6 +41,13 @@ export function PeerProvider({ children }) {
   const [pendingMeta, setPendingMeta]         = useState(null) // { name, size, totalChunks }
   const [role, setRole]                       = useState(null) // 'sender' | 'receiver'
   const [errorMsg, setErrorMsg]               = useState('')
+  const [e2eeReady, setE2eeReady]             = useState(false)
+
+  // ─── CHAT STATE ────────────────────────────────────────────────────────────
+  const [messages, setMessages]   = useState([])   // [{ from, text, ts }]
+  const [chatReady, setChatReady] = useState(false)
+  const chatConnRef               = useRef(null)    // dedicated chat data channel
+  const roleRef                   = useRef(null)    // mirror of role for use in callbacks
 
   // Refs — safe to read inside async callbacks without stale closure issues
   const statusRef         = useRef('idle')
@@ -39,12 +59,49 @@ export function PeerProvider({ children }) {
   const totalChunksRef    = useRef(0)
   const bytesReceivedRef  = useRef(0)
   const connRef           = useRef(null) // keep conn alive for accept/reject
+  const myKeyPairRef      = useRef(null)
+  const sharedKeyRef      = useRef(null)
 
   // Throttling and rolling speed refs
   const totalBytesRef           = useRef(0)
   const lastUpdateRef           = useRef(0)
   const lastSpeedCalcTimeRef    = useRef(0)
   const lastBytesTransferredRef  = useRef(0)
+
+  // ─── CHAT HELPERS ──────────────────────────────────────────────────────────
+  const addMessage = useCallback((msg) => {
+    setMessages(prev => [...prev, { from: msg.from, text: msg.text, ts: msg.ts }])
+  }, [])
+
+  const sendMessage = useCallback(async (text) => {
+    if (!chatConnRef.current || !text.trim() || !sharedKeyRef.current) return
+    try {
+      const { ciphertext, iv } = await encryptData(sharedKeyRef.current, text.trim())
+      const msg = { type: 'chat', ciphertext, iv, from: roleRef.current, ts: Date.now() }
+      chatConnRef.current.send(msg)
+      // Also add to own messages list
+      setMessages(prev => [...prev, { from: msg.from, text: text.trim(), ts: msg.ts }])
+    } catch (err) {
+      console.warn('Chat send failed:', err)
+    }
+  }, [])
+
+  const wireUpChatConn = useCallback((chatConn) => {
+    chatConnRef.current = chatConn
+    chatConn.on('open', () => setChatReady(true))
+    chatConn.on('data', async (msg) => {
+      if (msg?.type === 'chat' && sharedKeyRef.current) {
+        try {
+          const decryptedText = await decryptText(sharedKeyRef.current, msg.ciphertext, msg.iv)
+          addMessage({ ...msg, text: decryptedText })
+        } catch (e) {
+          console.error('Failed to decrypt chat message:', e)
+        }
+      }
+    })
+    chatConn.on('close', () => setChatReady(false))
+    chatConn.on('error', () => setChatReady(false))
+  }, [addMessage])
 
   const setStatus = useCallback((newStatus) => {
     statusRef.current = newStatus
@@ -120,16 +177,17 @@ export function PeerProvider({ children }) {
       const slice  = file.slice(offset, offset + CHUNK_SIZE)
       const reader = new FileReader()
 
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         // Double check connection still open before sending
         if (statusRef.current === 'cancelled' || statusRef.current === 'error' || !connRef.current) {
           return
         }
 
         try {
-          conn.send({ type: 'chunk', index: chunkIndex, data: e.target.result })
+          const { ciphertext, iv } = await encryptData(sharedKeyRef.current, e.target.result)
+          conn.send({ type: 'chunk', index: chunkIndex, data: ciphertext, iv })
         } catch (err) {
-          setErrorMsg(err.message || 'Failed to send chunk.')
+          setErrorMsg(err.message || 'Failed to encrypt/send chunk.')
           setStatus('error')
           return
         }
@@ -180,21 +238,48 @@ export function PeerProvider({ children }) {
     setSpeed(0)
     setErrorMsg('')
     setRole('sender')
+    roleRef.current = 'sender'
+    setMessages([])
+    setChatReady(false)
 
-    const peer = new Peer(id)
+    const peer = new Peer(id, PEER_SERVER)
     peerRef.current = peer
 
     peer.on('connection', (conn) => {
+      // Distinguish the chat channel from the file channel by label
+      if (conn.label === 'chat') {
+        wireUpChatConn(conn)
+        return
+      }
+
+      // ── File channel (existing logic) ──────────────────────────────────────
       connRef.current = conn
       setStatus('connecting')
 
-      conn.on('open', () => {
-        // Send file metadata — receiver will decide to accept or reject
-        sendMetaOverConn(conn)
+      conn.on('open', async () => {
+        try {
+          const keyPair = await generateKeyPair()
+          myKeyPairRef.current = keyPair
+          const pubKeyBytes = await exportPublicKey(keyPair.publicKey)
+          conn.send({ type: 'pubkey', key: pubKeyBytes })
+        } catch (e) {
+          setErrorMsg('Key generation failed.')
+          setStatus('error')
+        }
       })
 
-      conn.on('data', (msg) => {
-        if (msg.type === 'accepted') {
+      conn.on('data', async (msg) => {
+        if (msg.type === 'pubkey') {
+          try {
+            const theirPub = await importPublicKey(msg.key)
+            sharedKeyRef.current = await deriveSharedKey(myKeyPairRef.current.privateKey, theirPub)
+            setE2eeReady(true)
+            sendMetaOverConn(conn) // Trigger meta send AFTER key exchange
+          } catch (e) {
+            setErrorMsg('Key exchange failed.')
+            setStatus('error')
+          }
+        } else if (msg.type === 'accepted') {
           setStatus('transferring')
           sendChunksOverConn(conn)
         } else if (msg.type === 'rejected') {
@@ -242,22 +327,48 @@ export function PeerProvider({ children }) {
     setErrorMsg('')
     setPendingMeta(null)
     setRole('receiver')
+    roleRef.current = 'receiver'
+    setMessages([])
+    setChatReady(false)
     chunksRef.current        = []
     bytesReceivedRef.current = 0
 
-    const peer = new Peer()
+    const peer = new Peer(undefined, PEER_SERVER)
     peerRef.current = peer
 
     peer.on('open', () => {
-      const conn = peer.connect(targetId.trim().toUpperCase(), { reliable: true })
+      const cleanId = targetId.trim().toUpperCase()
+      const conn = peer.connect(cleanId, { reliable: true })
       connRef.current = conn
 
-      conn.on('open', () => {
+      // Open dedicated chat channel immediately alongside the file channel
+      const chatConn = peer.connect(cleanId, { reliable: true, label: 'chat' })
+      wireUpChatConn(chatConn)
+
+      conn.on('open', async () => {
         setStatus('connected')
+        try {
+          const keyPair = await generateKeyPair()
+          myKeyPairRef.current = keyPair
+          const pubKeyBytes = await exportPublicKey(keyPair.publicKey)
+          conn.send({ type: 'pubkey', key: pubKeyBytes })
+        } catch (e) {
+          setErrorMsg('Key generation failed.')
+          setStatus('error')
+        }
       })
 
-      conn.on('data', (msg) => {
-        if (msg.type === 'meta') {
+      conn.on('data', async (msg) => {
+        if (msg.type === 'pubkey') {
+          try {
+            const theirPub = await importPublicKey(msg.key)
+            sharedKeyRef.current = await deriveSharedKey(myKeyPairRef.current.privateKey, theirPub)
+            setE2eeReady(true)
+          } catch (e) {
+            setErrorMsg('Key exchange failed.')
+            setStatus('error')
+          }
+        } else if (msg.type === 'meta') {
           fileNameRef.current      = msg.name
           totalChunksRef.current   = msg.totalChunks
           totalBytesRef.current    = msg.size
@@ -275,8 +386,14 @@ export function PeerProvider({ children }) {
             lastBytesTransferredRef.current = 0
           }
 
-          chunksRef.current[msg.index]  = msg.data
-          bytesReceivedRef.current      += msg.data.byteLength
+          try {
+            const decrypted = await decryptData(sharedKeyRef.current, msg.data, msg.iv)
+            chunksRef.current[msg.index]  = decrypted
+            bytesReceivedRef.current      += decrypted.byteLength
+          } catch (e) {
+            console.error('Decryption failed for chunk', msg.index, e)
+            return
+          }
 
           const received = msg.index + 1
           const pct      = Math.min(100, Math.round((bytesReceivedRef.current / totalBytesRef.current) * 100))
@@ -394,17 +511,25 @@ export function PeerProvider({ children }) {
     fileRef.current = null
     setTransferredFileName('')
     setRole(null)
+    roleRef.current = null
     setErrorMsg('')
     setPendingMeta(null)
     connRef.current          = null
+    chatConnRef.current      = null
     chunksRef.current        = []
     bytesReceivedRef.current = 0
+    setMessages([])
+    setChatReady(false)
+    setE2eeReady(false)
+    myKeyPairRef.current     = null
+    sharedKeyRef.current     = null
   }, [])
 
   return (
     <PeerContext.Provider value={{
       roomId, status, progress, speed,
       selectedFile, transferredFileName, pendingMeta, role, errorMsg,
+      messages, chatReady, e2eeReady, sendMessage,
       setSelectedFile, generateRoom, connectToRoom, acceptTransfer, rejectTransfer, cancelTransfer, reset,
     }}>
       {children}
