@@ -16,7 +16,10 @@ import {
   AlertTriangle, 
   X, 
   Trash2,
-  FolderOpen
+  FolderOpen,
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 
 // ── Magnetic Button Wrapper ──
@@ -79,7 +82,7 @@ function getFileIcon(filename) {
 }
 
 export default function Send() {
-  const { selectedFile, setSelectedFile, roomId, status, errorMsg, generateRoom } = usePeer()
+  const { selectedFile, setSelectedFile, roomId, status, errorMsg, generateRoom, passphrase, setPassphrase } = usePeer()
   const navigate = useNavigate()
   const inputRef = useRef(null)
   const folderInputRef = useRef(null)
@@ -88,6 +91,7 @@ export default function Send() {
   const [isZipping, setIsZipping] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showPass, setShowPass] = useState(false)
 
   // Redirect to progress page once handshake completes and transmission begins
   useEffect(() => {
@@ -351,6 +355,42 @@ export default function Send() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* ── Optional Passphrase ── */}
+        <div className="space-y-2">
+          <div className="text-xxs text-gray-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+            <Lock size={10} className="text-indigo-400" />
+            Room Passphrase
+            <span className="text-gray-600 normal-case font-normal ml-1">(optional)</span>
+          </div>
+          <div className="relative flex items-center">
+            <input
+              type={showPass ? 'text' : 'password'}
+              value={passphrase}
+              onChange={(e) => setPassphrase(e.target.value)}
+              placeholder="Lock this room with a passphrase…"
+              disabled={status === 'waiting' || status === 'connecting' || status === 'awaiting_approval'}
+              className="w-full p-3.5 pr-10 rounded-xl bg-white/[0.02] border border-white/6 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-indigo-500/50 focus:bg-indigo-500/[0.03] transition-all duration-200 font-mono disabled:opacity-40"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPass(p => !p)}
+              className="absolute right-3 text-gray-600 hover:text-gray-400 transition-colors cursor-pointer"
+            >
+              {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          </div>
+          {passphrase && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-1.5 text-xxs text-emerald-400 font-bold"
+            >
+              <Lock size={10} />
+              Room will be password-protected
+            </motion.div>
+          )}
+        </div>
 
         {/* ── Room ID Panel ── */}
         <div className="flex flex-col md:flex-row md:items-end gap-4">

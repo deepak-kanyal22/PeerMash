@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useCallback } from 'react'
 import Peer from 'peerjs'
-import { generateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encryptData, decryptData, decryptText } from '../crypto/e2ee'
+import { generateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encryptData, decryptData, decryptText, derivePassphraseKey, mixPassphraseIntoKey } from '../crypto/e2ee'
 
 const PeerContext = createContext(null)
 
@@ -42,6 +42,11 @@ export function PeerProvider({ children }) {
   const [role, setRole]                       = useState(null) // 'sender' | 'receiver'
   const [errorMsg, setErrorMsg]               = useState('')
   const [e2eeReady, setE2eeReady]             = useState(false)
+
+  // ─── PASSWORD PROTECTION ────────────────────────────────────────────────────
+  const [passphrase, setPassphraseState]      = useState('')
+  const passphraseRef = useRef('')   // mirror for use in async callbacks
+  const saltRef       = useRef(null) // 16-byte random salt array for PBKDF2
 
   // ─── CHAT STATE ────────────────────────────────────────────────────────────
   const [messages, setMessages]   = useState([])   // [{ from, text, ts }]
@@ -108,6 +113,12 @@ export function PeerProvider({ children }) {
     setStatusState(newStatus)
   }, [])
 
+  /** Keep passphraseRef in sync so async callbacks always see the latest value */
+  const setPassphrase = useCallback((p) => {
+    passphraseRef.current = p.trim()
+    setPassphraseState(p)
+  }, [])
+
   /** Keep ref and state in sync so callbacks always see the latest file */
   const setSelectedFile = useCallback((file) => {
     fileRef.current = file
@@ -136,7 +147,14 @@ export function PeerProvider({ children }) {
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
 
     // Send metadata — receiver will show Accept/Reject prompt
-    conn.send({ type: 'meta', name: file.name, size: file.size, totalChunks })
+    conn.send({
+      type: 'meta',
+      name: file.name,
+      size: file.size,
+      totalChunks,
+      hasPassword: !!passphraseRef.current,
+      salt: saltRef.current,
+    })
     setStatus('awaiting_approval')
   }, [])
 
@@ -242,6 +260,11 @@ export function PeerProvider({ children }) {
     setMessages([])
     setChatReady(false)
 
+    // Generate a fresh 16-byte salt each time we create a password-protected room
+    saltRef.current = passphraseRef.current
+      ? Array.from(window.crypto.getRandomValues(new Uint8Array(16)))
+      : null
+
     const peer = new Peer(id, PEER_SERVER)
     peerRef.current = peer
 
@@ -272,7 +295,15 @@ export function PeerProvider({ children }) {
         if (msg.type === 'pubkey') {
           try {
             const theirPub = await importPublicKey(msg.key)
-            sharedKeyRef.current = await deriveSharedKey(myKeyPairRef.current.privateKey, theirPub)
+            let derivedKey = await deriveSharedKey(myKeyPairRef.current.privateKey, theirPub)
+
+            // Sender: mix PBKDF2 key into ECDH key if room is password-protected
+            if (passphraseRef.current && saltRef.current) {
+              const pbkdf2Bits = await derivePassphraseKey(passphraseRef.current, saltRef.current)
+              derivedKey = await mixPassphraseIntoKey(derivedKey, pbkdf2Bits)
+            }
+
+            sharedKeyRef.current = derivedKey
             setE2eeReady(true)
             sendMetaOverConn(conn) // Trigger meta send AFTER key exchange
           } catch (e) {
@@ -374,7 +405,8 @@ export function PeerProvider({ children }) {
           totalBytesRef.current    = msg.size
           chunksRef.current        = new Array(msg.totalChunks)
           bytesReceivedRef.current = 0
-          setPendingMeta({ name: msg.name, size: msg.size, totalChunks: msg.totalChunks })
+          saltRef.current          = msg.salt || null  // stored for use in acceptTransfer
+          setPendingMeta({ name: msg.name, size: msg.size, totalChunks: msg.totalChunks, hasPassword: !!msg.hasPassword, salt: msg.salt })
           setStatus('pending')
 
         } else if (msg.type === 'chunk') {
@@ -392,6 +424,11 @@ export function PeerProvider({ children }) {
             bytesReceivedRef.current      += decrypted.byteLength
           } catch (e) {
             console.error('Decryption failed for chunk', msg.index, e)
+            // Likely wrong passphrase — surface a clear error on the first chunk
+            if (msg.index === 0) {
+              setErrorMsg('Decryption failed — wrong passphrase or data corruption.')
+              setStatus('error')
+            }
             return
           }
 
@@ -457,8 +494,21 @@ export function PeerProvider({ children }) {
   /**
    * RECEIVER — Accept the pending transfer. Notifies sender and starts receiving.
    */
-  const acceptTransfer = useCallback(() => {
+  const acceptTransfer = useCallback(async (enteredPassphrase = '') => {
     if (!connRef.current) return
+
+    // Receiver: mix PBKDF2 key into ECDH shared key if the room is password-protected
+    if (enteredPassphrase && saltRef.current && sharedKeyRef.current) {
+      try {
+        const pbkdf2Bits = await derivePassphraseKey(enteredPassphrase.trim(), saltRef.current)
+        sharedKeyRef.current = await mixPassphraseIntoKey(sharedKeyRef.current, pbkdf2Bits)
+      } catch (e) {
+        setErrorMsg('Passphrase key derivation failed.')
+        setStatus('error')
+        return
+      }
+    }
+
     connRef.current.send({ type: 'accepted' })
     setTransferredFileName(fileNameRef.current)
     startTimeRef.current = Date.now()
@@ -523,6 +573,9 @@ export function PeerProvider({ children }) {
     setE2eeReady(false)
     myKeyPairRef.current     = null
     sharedKeyRef.current     = null
+    passphraseRef.current    = ''
+    saltRef.current          = null
+    setPassphraseState('')
   }, [])
 
   return (
@@ -530,6 +583,7 @@ export function PeerProvider({ children }) {
       roomId, status, progress, speed,
       selectedFile, transferredFileName, pendingMeta, role, errorMsg,
       messages, chatReady, e2eeReady, sendMessage,
+      passphrase, setPassphrase,
       setSelectedFile, generateRoom, connectToRoom, acceptTransfer, rejectTransfer, cancelTransfer, reset,
     }}>
       {children}

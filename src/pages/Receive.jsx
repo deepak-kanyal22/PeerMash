@@ -16,7 +16,9 @@ import {
   Video, 
   Music, 
   FileText,
-  User
+  User,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 
 // ── Magnetic Button Wrapper ──
@@ -80,6 +82,8 @@ function getFileIcon(filename) {
 export default function Receive() {
   const { status, errorMsg, pendingMeta, connectToRoom, acceptTransfer, rejectTransfer } = usePeer()
   const [inputId, setInputId] = useState('')
+  const [passInput, setPassInput] = useState('')
+  const [showPass, setShowPass] = useState(false)
   const navigate = useNavigate()
 
   // Redirect to progress page once the stream initiates
@@ -88,6 +92,12 @@ export default function Receive() {
       navigate('/progress')
     }
   }, [status, navigate])
+
+  // Clear passphrase field whenever a new transfer request arrives
+  useEffect(() => {
+    setPassInput('')
+    setShowPass(false)
+  }, [pendingMeta?.name])
 
   const handleConnect = () => {
     const id = inputId.trim()
@@ -145,6 +155,43 @@ export default function Receive() {
           </div>
         </div>
 
+        {/* ── Passphrase input (only if the room is password-protected) ── */}
+        {pendingMeta.hasPassword && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 space-y-2 text-left"
+          >
+            <div className="text-xxs text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <Lock size={10} />
+              Password Protected Room
+            </div>
+            <div className="relative flex items-center">
+              <input
+                type={showPass ? 'text' : 'password'}
+                value={passInput}
+                onChange={(e) => setPassInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && passInput.trim()) acceptTransfer(passInput)
+                }}
+                placeholder="Enter room passphrase…"
+                autoFocus
+                className="w-full p-3.5 pr-10 rounded-xl bg-amber-500/[0.02] border border-amber-500/20 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-amber-500/50 focus:bg-amber-500/[0.03] transition-all duration-200 font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(p => !p)}
+                className="absolute right-3 text-gray-600 hover:text-gray-400 transition-colors cursor-pointer"
+              >
+                {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+            <p className="text-xxs text-gray-600 font-semibold">
+              The sender locked this room. Enter the passphrase to decrypt the transfer.
+            </p>
+          </motion.div>
+        )}
+
         {/* Modal Buttons */}
         <div className="flex gap-3 relative z-10">
           <motion.button
@@ -159,8 +206,9 @@ export default function Receive() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={acceptTransfer}
-            className="flex-1 py-3 px-4 rounded-xl font-bold text-sm border border-emerald-500/25 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-400/40 transition-all duration-200 cursor-pointer glow-green shadow-emerald-500/10 flex items-center justify-center gap-2 select-none"
+            onClick={() => acceptTransfer(pendingMeta.hasPassword ? passInput : '')}
+            disabled={pendingMeta.hasPassword && !passInput.trim()}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm border border-emerald-500/25 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-400/40 transition-all duration-200 cursor-pointer glow-green shadow-emerald-500/10 flex items-center justify-center gap-2 select-none ${pendingMeta.hasPassword && !passInput.trim() ? 'opacity-40 !cursor-not-allowed' : ''}`}
           >
             <Check size={15} />
             Accept File
