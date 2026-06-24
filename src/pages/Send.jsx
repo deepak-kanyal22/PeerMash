@@ -21,7 +21,8 @@ import {
   Eye,
   EyeOff,
   Share2,
-  FileDown
+  FileDown,
+  Link2
 } from 'lucide-react'
 
 // ── Magnetic Button Wrapper ──
@@ -93,6 +94,7 @@ export default function Send() {
   const [isZipping, setIsZipping] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [compress, setCompress] = useState(true)
 
@@ -121,6 +123,17 @@ export default function Send() {
     setIsDragging(false)
   }
 
+  const getShareUrl = () => {
+    return `${window.location.origin}/receive?room=${roomId}`
+  }
+
+  const copyLink = () => {
+    if (!roomId) return
+    navigator.clipboard.writeText(getShareUrl())
+    setCopiedLink(true)
+    setTimeout(() => setCopiedLink(false), 2000)
+  }
+
   const copyRoom = () => {
     if (!roomId) return
     navigator.clipboard.writeText(roomId)
@@ -130,12 +143,13 @@ export default function Send() {
 
   const shareRoom = async () => {
     if (!roomId) return
+    const shareUrl = getShareUrl()
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'PeerMesh Room', text: `Join me on PeerMesh! Room ID: ${roomId}`, url: window.location.origin + '/receive' })
+        await navigator.share({ title: 'PeerMesh Room', text: `Join my PeerMesh room to receive files directly!`, url: shareUrl })
       } catch (_) {}
     } else {
-      copyRoom()
+      copyLink()
     }
   }
 
@@ -485,12 +499,20 @@ export default function Send() {
                     exit={{ opacity: 0, scale: 0.95 }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={shareRoom}
-                    className={`btn btn-ghost py-4 font-bold select-none cursor-pointer border border-white/10 flex items-center justify-center gap-2`}
-                    title="Share Room ID"
+                    onClick={copyLink}
+                    className={`btn ${copiedLink ? 'btn-success glow-green' : 'btn-ghost'} py-4 font-bold select-none cursor-pointer border border-white/10 flex items-center justify-center gap-2`}
                   >
-                    <Share2 size={16} />
-                    Share
+                    {copiedLink ? (
+                      <>
+                        <Check size={16} />
+                        Link Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Link2 size={16} />
+                        Copy Link
+                      </>
+                    )}
                   </motion.button>
                   <motion.button
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -504,7 +526,7 @@ export default function Send() {
                     {copied ? (
                       <>
                         <Check size={16} />
-                        Copied!
+                        ID Copied!
                       </>
                     ) : (
                       <>
@@ -512,6 +534,19 @@ export default function Send() {
                         Copy Room ID
                       </>
                     )}
+                  </motion.button>
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={shareRoom}
+                    className={`btn btn-ghost py-4 font-bold select-none cursor-pointer border border-white/10 flex items-center justify-center gap-2`}
+                    title="Share Room Link"
+                  >
+                    <Share2 size={16} />
+                    Share Link
                   </motion.button>
                 </>
               )}

@@ -80,16 +80,6 @@ export default function NavBar() {
             )
           })}
 
-          {/* Theme Toggle */}
-          <motion.button
-            whileHover={{ scale: 1.12 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={toggleTheme}
-            className="ml-1 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </motion.button>
         </nav>
       </div>
     </header>

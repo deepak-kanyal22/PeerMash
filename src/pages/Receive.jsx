@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
 import { usePeer } from '../context/PeerContext'
 import {
@@ -81,10 +81,19 @@ function getFileIcon(filename) {
 
 export default function Receive() {
   const { status, errorMsg, pendingMeta, connectToRoom, acceptTransfer, rejectTransfer } = usePeer()
+  const [searchParams] = useSearchParams()
   const [inputId, setInputId] = useState('')
   const [passInput, setPassInput] = useState('')
   const [showPass, setShowPass] = useState(false)
   const navigate = useNavigate()
+
+  // Read URL query parameter for active room ID on mount
+  useEffect(() => {
+    const roomParam = searchParams.get('room')
+    if (roomParam) {
+      setInputId(roomParam.trim().toUpperCase())
+    }
+  }, [searchParams])
 
   // Redirect to progress page once the stream initiates
   useEffect(() => {

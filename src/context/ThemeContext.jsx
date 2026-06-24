@@ -3,24 +3,15 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 const ThemeContext = createContext(null)
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('peermesh-theme')
-    return saved || 'dark'
-  })
+  const [theme] = useState('dark')
 
   useEffect(() => {
-    localStorage.setItem('peermesh-theme', theme)
     const root = document.documentElement
-    if (theme === 'light') {
-      root.classList.add('light')
-      root.classList.remove('dark')
-    } else {
-      root.classList.add('dark')
-      root.classList.remove('light')
-    }
-  }, [theme])
+    root.classList.add('dark')
+    root.classList.remove('light')
+  }, [])
 
-  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark')
+  const toggleTheme = () => {}
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
