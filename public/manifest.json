@@ -1,0 +1,22 @@
+{
+  "name": "PeerMesh - P2P File Transfer",
+  "short_name": "PeerMesh",
+  "description": "Transfer files directly browser-to-browser. Encrypted, serverless, no limits.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020408",
+  "theme_color": "#020408",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -19,7 +19,9 @@ import {
   FolderOpen,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  Share2,
+  FileDown
 } from 'lucide-react'
 
 // ── Magnetic Button Wrapper ──
@@ -92,6 +94,7 @@ export default function Send() {
   const [isDragging, setIsDragging] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showPass, setShowPass] = useState(false)
+  const [compress, setCompress] = useState(true)
 
   // Redirect to progress page once handshake completes and transmission begins
   useEffect(() => {
@@ -125,6 +128,17 @@ export default function Send() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const shareRoom = async () => {
+    if (!roomId) return
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'PeerMesh Room', text: `Join me on PeerMesh! Room ID: ${roomId}`, url: window.location.origin + '/receive' })
+      } catch (_) {}
+    } else {
+      copyRoom()
+    }
+  }
+
   const handleGenerateRoom = async () => {
     if (selectedFiles.length === 0) return
 
@@ -139,7 +153,11 @@ export default function Send() {
           const path = file.webkitRelativePath || file.name
           zip.file(path, file)
         })
-        const zipBlob = await zip.generateAsync({ type: 'blob' })
+        const zipBlob = await zip.generateAsync({
+          type: 'blob',
+          compression: compress ? 'DEFLATE' : 'STORE',
+          compressionOptions: compress ? { level: 6 } : undefined,
+        })
         const zipFile = new File([zipBlob], 'peermesh-transfer.zip', {
           type: 'application/zip',
           lastModified: Date.now(),
@@ -392,6 +410,29 @@ export default function Send() {
           )}
         </div>
 
+        {/* ── Compression Toggle ── */}
+        {selectedFiles.length > 1 && (
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] border border-white/6">
+            <div className="flex items-center gap-2.5">
+              <FileDown size={15} className="text-indigo-400" />
+              <div>
+                <div className="text-sm font-bold text-gray-200">Compress Files</div>
+                <div className="text-xxs text-gray-500">DEFLATE compression before transfer</div>
+              </div>
+            </div>
+            <button
+              onClick={() => setCompress(c => !c)}
+              className={`relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer ${
+                compress ? 'bg-indigo-500' : 'bg-white/10'
+              }`}
+            >
+              <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-200 ${
+                compress ? 'translate-x-5.5' : 'translate-x-0.5'
+              }`} />
+            </button>
+          </div>
+        )}
+
         {/* ── Room ID Panel ── */}
         <div className="flex flex-col md:flex-row md:items-end gap-4">
           <div className="flex-1 p-4.5 rounded-2xl bg-white/[0.02] border border-white/6 shadow-inner relative overflow-hidden">
@@ -437,27 +478,42 @@ export default function Send() {
 
             <AnimatePresence>
               {roomId && (
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={copyRoom}
-                  className={`btn ${copied ? 'btn-success glow-green' : 'btn-ghost'} py-4 font-bold select-none cursor-pointer border border-white/10 flex items-center justify-center gap-2`}
-                >
-                  {copied ? (
-                    <>
-                      <Check size={16} />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={16} />
-                      Copy Room ID
-                    </>
-                  )}
-                </motion.button>
+                <>
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={shareRoom}
+                    className={`btn btn-ghost py-4 font-bold select-none cursor-pointer border border-white/10 flex items-center justify-center gap-2`}
+                    title="Share Room ID"
+                  >
+                    <Share2 size={16} />
+                    Share
+                  </motion.button>
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={copyRoom}
+                    className={`btn ${copied ? 'btn-success glow-green' : 'btn-ghost'} py-4 font-bold select-none cursor-pointer border border-white/10 flex items-center justify-center gap-2`}
+                  >
+                    {copied ? (
+                      <>
+                        <Check size={16} />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={16} />
+                        Copy Room ID
+                      </>
+                    )}
+                  </motion.button>
+                </>
               )}
             </AnimatePresence>
           </div>

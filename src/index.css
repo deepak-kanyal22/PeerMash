@@ -17,10 +17,41 @@
   --pink: #ff2a8a;
   --amber: #ffb300;
   --text: #dde8f5;
+  --text-secondary: #dde8f5;
+  --text-muted: #4a6278;
   --muted: #4a6278;
   --glass: rgba(4,12,20,0.75);
-  --border: rgba(0,229,255,0.12);
-  --border2: rgba(0,229,255,0.06);
+  --glass-border: rgba(255,255,255,0.07);
+  --glass-nav-bg: rgba(2,4,8,0.85);
+  --glass-nav-border: rgba(0,229,255,0.1);
+  --card-bg: rgba(4,12,20,0.65);
+  --card-border: rgba(255,255,255,0.06);
+  --input-bg: rgba(255,255,255,0.03);
+  --input-border: rgba(255,255,255,0.08);
+  --input-text: #dde8f5;
+  --section-title: #ffffff;
+  --metric-bg: rgba(4,12,20,0.6);
+  --metric-border: rgba(255,255,255,0.05);
+  --terminal-bg: rgba(2,4,8,0.9);
+  --badge-bg: rgba(0,229,255,0.08);
+  --badge-border: rgba(0,229,255,0.25);
+  --badge-color: var(--cyan);
+  --scrollbar-thumb: rgba(0,229,255,0.15);
+
+  /* Chat panel */
+  --chat-bg: rgba(3,6,12,0.97);
+  --chat-border: rgba(255,255,255,0.05);
+  --chat-text: #dde8f5;
+  --chat-muted: rgba(74,98,120,0.8);
+  --chat-input-bg: rgba(255,255,255,0.04);
+  --chat-input-border: rgba(255,255,255,0.08);
+  --chat-msg-own: linear-gradient(135deg, rgba(0,229,255,0.14), rgba(0,180,216,0.1));
+  --chat-msg-own-text: #dde8f5;
+  --chat-msg-peer: rgba(255,255,255,0.05);
+  --chat-msg-peer-text: #94a3b8;
+  --chat-btn-bg: linear-gradient(135deg, #00e5ff, #00b4d8);
+
+  /* Font families */
   --ff-head: 'Inter', 'Outfit', system-ui, sans-serif;
   --ff-body: 'Outfit', 'Inter', system-ui, sans-serif;
   --ff-mono: 'IBM Plex Mono', 'JetBrains Mono', monospace;
@@ -48,6 +79,48 @@
   --radius-2xl: 24px;
   --radius-full: 9999px;
 }
+
+/* ── Light Theme Variables ────────────────────────────── */
+html.light {
+  --c0: #f0f2f5;
+  --c1: #e4e7ec;
+  --c2: #d8dce5;
+  --c3: #cdd2dc;
+  --text: #1a1a2e;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --muted: #6b7280;
+  --glass: rgba(255,255,255,0.8);
+  --glass-border: rgba(0,0,0,0.08);
+  --glass-nav-bg: rgba(255,255,255,0.85);
+  --glass-nav-border: rgba(0,0,0,0.08);
+  --card-bg: rgba(255,255,255,0.7);
+  --card-border: rgba(0,0,0,0.06);
+  --input-bg: rgba(0,0,0,0.02);
+  --input-border: rgba(0,0,0,0.1);
+  --input-text: #1a1a2e;
+  --section-title: #1a1a2e;
+  --metric-bg: rgba(255,255,255,0.7);
+  --metric-border: rgba(0,0,0,0.06);
+  --terminal-bg: rgba(255,255,255,0.85);
+  --badge-bg: rgba(99,102,241,0.08);
+  --badge-border: rgba(99,102,241,0.25);
+  --badge-color: #6366f1;
+  --scrollbar-thumb: rgba(99,102,241,0.2);
+  --chat-bg: rgba(255,255,255,0.97);
+  --chat-border: rgba(0,0,0,0.06);
+  --chat-text: #1a1a2e;
+  --chat-muted: rgba(107,114,128,0.8);
+  --chat-input-bg: rgba(0,0,0,0.02);
+  --chat-input-border: rgba(0,0,0,0.08);
+  --chat-msg-own: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(79,70,229,0.08));
+  --chat-msg-own-text: #1a1a2e;
+  --chat-msg-peer: rgba(0,0,0,0.03);
+  --chat-msg-peer-text: #374151;
+  --chat-btn-bg: linear-gradient(135deg, #6366f1, #4f46e5);
+}
+
+html.light .text-white { color: #1a1a2e !important; }
 
 /* ── Base resets ──────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
@@ -102,10 +175,10 @@ body::after {
    GLASS SYSTEM
 ═══════════════════════════════════════════ */
 .glass {
-  background: rgba(4,12,20,0.65);
+  background: var(--card-bg);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid var(--card-border);
 }
 
 .glass-strong {
@@ -119,7 +192,7 @@ body::after {
   background: var(--glass);
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid var(--glass-border);
   box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
   transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
 }
@@ -142,15 +215,221 @@ body::after {
 .glass-card:hover::before { opacity: 1; }
 
 .glass-nav {
-  background: rgba(2,4,8,0.85);
+  background: var(--glass-nav-bg);
   backdrop-filter: blur(30px) saturate(180%);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
-  border: 1px solid rgba(0,229,255,0.1);
-  box-shadow:
-    0 0 0 1px rgba(0,229,255,0.05),
-    0 8px 40px rgba(0,0,0,0.6),
-    0 0 60px rgba(0,229,255,0.03);
+  border: 1px solid var(--glass-nav-border);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
 }
+
+html.light .glass { background: var(--card-bg); border: 1px solid var(--card-border); }
+html.light .glass-strong { background: rgba(255,255,255,0.88); border: 1px solid rgba(0,0,0,0.1); }
+html.light .glass-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5);
+}
+html.light .glass-card:hover {
+  border-color: rgba(99,102,241,0.3);
+  box-shadow: 0 0 40px rgba(99,102,241,0.08), 0 8px 32px rgba(0,0,0,0.08);
+}
+html.light .glass-card::before { background: linear-gradient(90deg, transparent, rgba(99,102,241,0.3), transparent); }
+html.light .glass-nav {
+  background: var(--glass-nav-bg);
+  border: 1px solid var(--glass-nav-border);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.06);
+}
+html.light body { background-color: var(--c0); color: var(--text); }
+html.light ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); }
+html.light ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb); }
+
+/* ── Light Theme: Only override text-white (most common issue) ── */
+html.light .text-white { color: #1a1a2e !important; }
+html.light .text-gray-100 { color: #374151 !important; }
+html.light .text-gray-200 { color: #374151 !important; }
+html.light .text-gray-300 { color: #4b5563 !important; }
+html.light .text-gray-400 { color: #6b7280 !important; }
+html.light .text-gray-500 { color: #9ca3af !important; }
+html.light .text-gray-550 { color: #9ca3af !important; }
+html.light .text-gray-600 { color: #9ca3af !important; }
+html.light .text-gray-700 { color: #9ca3af !important; }
+html.light .bg-black\/40 { background: rgba(255,255,255,0.6) !important; }
+html.light .bg-black\/75 { background: rgba(255,255,255,0.85) !important; }
+html.light .bg-black\/5 { background: rgba(0,0,0,0.04) !important; }
+
+/* Light background tints in light mode become subtle dark tints */
+html.light .bg-white\/2 { background: rgba(0,0,0,0.02) !important; }
+html.light .bg-white\/3 { background: rgba(0,0,0,0.03) !important; }
+html.light .bg-white\/5 { background: rgba(0,0,0,0.04) !important; }
+html.light .bg-white\/8 { background: rgba(0,0,0,0.06) !important; }
+html.light .bg-white\/10 { background: rgba(0,0,0,0.08) !important; }
+html.light .bg-white\/\[0\.01\] { background: rgba(0,0,0,0.01) !important; }
+html.light .bg-white\/\[0\.02\] { background: rgba(0,0,0,0.02) !important; }
+html.light .bg-white\/\[0\.04\] { background: rgba(0,0,0,0.03) !important; }
+
+/* Borders become visible in light mode */
+html.light .border-white\/4 { border-color: rgba(0,0,0,0.06) !important; }
+html.light .border-white\/5 { border-color: rgba(0,0,0,0.08) !important; }
+html.light .border-white\/6 { border-color: rgba(0,0,0,0.1) !important; }
+html.light .border-white\/8 { border-color: rgba(0,0,0,0.12) !important; }
+html.light .border-white\/10 { border-color: rgba(0,0,0,0.15) !important; }
+
+/* ── Light Theme: Scanlines & Overlays ────────────────── */
+html.light body::after { opacity: 0.06; }
+html.light .noise-overlay { opacity: 0.08; }
+
+/* ── Light Theme: Buttons ─────────────────────────────── */
+html.light .btn-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
+}
+html.light .btn-primary:hover {
+  box-shadow: 0 0 40px rgba(99,102,241,0.35), 0 6px 24px rgba(79,70,229,0.25);
+}
+html.light .btn-ghost {
+  background: rgba(0,0,0,0.03);
+  color: var(--text);
+  border: 1px solid rgba(0,0,0,0.1);
+}
+html.light .btn-ghost:hover {
+  background: rgba(0,0,0,0.06);
+  border-color: rgba(0,0,0,0.18);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+html.light .btn-danger {
+  background: rgba(239,68,68,0.06);
+  color: #dc2626;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+html.light .btn-success {
+  background: rgba(34,197,94,0.06);
+  color: #16a34a;
+  border: 1px solid rgba(34,197,94,0.2);
+}
+
+/* ── Light Theme: Badge ───────────────────────────────── */
+html.light .badge-neon {
+  background: rgba(99,102,241,0.08);
+  border-color: rgba(99,102,241,0.25);
+  color: #6366f1;
+}
+
+/* ── Light Theme: Metric Card ─────────────────────────── */
+html.light .metric-card {
+  background: rgba(255,255,255,0.7);
+  border-color: rgba(0,0,0,0.06);
+}
+html.light .metric-card:hover {
+  border-color: rgba(99,102,241,0.2);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.06);
+}
+html.light .metric-value { color: #1a1a2e; }
+
+/* ── Light Theme: Section Labels / Titles ─────────────── */
+html.light .section-label { color: #6366f1; }
+html.light .section-label::before { background: #6366f1; }
+html.light .section-title { color: #1a1a2e; }
+html.light .section-subtitle { color: #6b7280; }
+
+/* ── Light Theme: Stat Card ───────────────────────────── */
+html.light .stat-card {
+  background: rgba(255,255,255,0.7);
+  border-color: rgba(0,0,0,0.06);
+}
+html.light .stat-card:hover {
+  border-color: rgba(0,0,0,0.12);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.06);
+}
+
+/* ── Light Theme: Terminal ────────────────────────────── */
+html.light .terminal {
+  background: rgba(255,255,255,0.85);
+  border-color: rgba(0,0,0,0.08);
+}
+html.light .terminal-header {
+  border-bottom-color: rgba(0,0,0,0.06);
+  background: rgba(0,0,0,0.02);
+}
+html.light .terminal-body { color: #4b5563; }
+
+/* ── Light Theme: Peer Card Home ──────────────────────── */
+html.light .peer-card-home {
+  background: rgba(255,255,255,0.7);
+  border-color: rgba(0,0,0,0.06);
+}
+html.light .peer-card-home:hover {
+  border-color: rgba(99,102,241,0.2);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.06);
+}
+
+/* ── Light Theme: Input ───────────────────────────────── */
+html.light .input-premium {
+  background: rgba(0,0,0,0.02);
+  border-color: rgba(0,0,0,0.1);
+  color: #1a1a2e;
+}
+html.light .input-premium:focus {
+  border-color: rgba(99,102,241,0.5);
+  background: rgba(99,102,241,0.02);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.06);
+}
+
+/* ── Light Theme: Dropzone ────────────────────────────── */
+html.light .dropzone-idle {
+  border-color: rgba(99,102,241,0.2);
+  background: rgba(99,102,241,0.01);
+}
+html.light .dropzone-home {
+  border-color: rgba(99,102,241,0.18);
+  background: rgba(99,102,241,0.01);
+}
+html.light .dropzone-home:hover {
+  border-color: rgba(99,102,241,0.35);
+  background: rgba(99,102,241,0.03);
+  box-shadow: 0 0 40px rgba(99,102,241,0.06);
+}
+
+/* ── Light Theme: Status Strip ────────────────────────── */
+html.light .status-strip {
+  background: rgba(99,102,241,0.03);
+  border-color: rgba(0,0,0,0.06);
+}
+
+/* ── Light Theme: HUD Pill ────────────────────────────── */
+html.light .hud-pill {
+  background: rgba(255,255,255,0.9);
+  border-color: rgba(0,0,0,0.08);
+}
+
+/* ── Light Theme: Ticker ──────────────────────────────── */
+html.light .ticker-wrap {
+  border-color: rgba(0,0,0,0.06);
+  background: rgba(99,102,241,0.02);
+}
+
+/* ── Light Theme: Hero Chip ───────────────────────────── */
+html.light .hero-chip {
+  background: rgba(99,102,241,0.06);
+  border-color: rgba(99,102,241,0.2);
+  color: #6366f1;
+}
+
+/* ── Light Theme: SVG circle backgrounds ──────────────── */
+html.light .circular-progress-bg {
+  stroke: rgba(0,0,0,0.06);
+}
+
+/* ── Light Theme: Gradient text stays readable ────────── */
+html.light .gradient-text-hero {
+  background: linear-gradient(135deg, #1a1a2e 0%, #6366f1 30%, #00b4d8 60%, #7b2fff 80%, #1a1a2e 100%);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Light Theme: Scan line reduced opacity ───────────── */
+html.light .scan-line { opacity: 2 !important; }
 
 /* ═══════════════════════════════════════════
    GRADIENT TEXT
@@ -242,9 +521,9 @@ body::after {
 }
 
 .btn-ghost {
-  background: rgba(255,255,255,0.04);
+  background: var(--input-bg);
   color: var(--text);
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid var(--input-border);
 }
 .btn-ghost:hover {
   background: rgba(255,255,255,0.08);
@@ -745,7 +1024,7 @@ body::after {
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: #ffffff;
+  color: var(--section-title);
   line-height: 1.2;
   margin-bottom: var(--space-sm);
 }
@@ -753,7 +1032,7 @@ body::after {
 .section-subtitle {
   font-family: var(--ff-body);
   font-size: 1rem;
-  color: var(--muted);
+  color: var(--text-muted);
   max-width: 560px;
   line-height: 1.6;
 }
@@ -762,10 +1041,10 @@ body::after {
    METRIC CARD
 ═══════════════════════════════════════════ */
 .metric-card {
-  background: rgba(4,12,20,0.6);
+  background: var(--metric-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid var(--metric-border);
   border-radius: var(--radius-lg);
   padding: 20px 24px;
   position: relative;
@@ -809,7 +1088,7 @@ body::after {
   font-family: var(--ff-mono);
   font-size: 1.5rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--section-title);
   font-variant-numeric: tabular-nums;
 }
 

@@ -138,12 +138,12 @@ export default function ChatPanel({ isOpen, onToggle }) {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.22 }}
-                onClick={onToggle}
-                style={{
-                  position: 'fixed', inset: 0, zIndex: 9000,
-                  background: 'rgba(2,4,8,0.6)',
-                  backdropFilter: 'blur(5px)',
-                }}
+                  onClick={onToggle}
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 9000,
+                    background: 'rgba(0,0,0,0.3)',
+                    backdropFilter: 'blur(5px)',
+                  }}
               />
 
               {/* Drawer */}
@@ -153,18 +153,18 @@ export default function ChatPanel({ isOpen, onToggle }) {
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
                 transition={{ type: 'spring', stiffness: 310, damping: 33 }}
-                style={{
-                  position: 'fixed', top: 0, right: 0,
-                  width: '400px',
-                  height: '100%',
-                  zIndex: 9001,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  background: 'rgba(3,6,12,0.97)',
-                  backdropFilter: 'blur(40px)',
-                  borderLeft: '1px solid rgba(0,229,255,0.1)',
-                  boxShadow: '-32px 0 80px rgba(0,0,0,0.9)',
-                }}
+                  style={{
+                    position: 'fixed', top: 0, right: 0,
+                    width: '400px',
+                    height: '100%',
+                    zIndex: 9001,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: 'var(--chat-bg)',
+                    backdropFilter: 'blur(40px)',
+                    borderLeft: '1px solid var(--chat-border)',
+                    boxShadow: '-32px 0 80px rgba(0,0,0,0.5)',
+                  }}
               >
                 {/* Neon top accent */}
                 <div style={{
@@ -177,8 +177,8 @@ export default function ChatPanel({ isOpen, onToggle }) {
                 <div style={{
                   flexShrink: 0,
                   padding: '18px 20px 16px',
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
-                  background: 'linear-gradient(180deg, rgba(0,229,255,0.025) 0%, transparent 100%)',
+                  borderBottom: '1px solid var(--chat-border)',
+                  background: 'transparent',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -193,7 +193,7 @@ export default function ChatPanel({ isOpen, onToggle }) {
                         <MessageSquare size={17} color="rgba(0,229,255,0.85)" />
                       </div>
                       <div>
-                        <div style={{ fontFamily: 'var(--ff-head)', fontWeight: 700, fontSize: '15px', color: '#fff', letterSpacing: '-0.01em' }}>
+                        <div style={{ fontFamily: 'var(--ff-head)', fontWeight: 700, fontSize: '15px', color: 'var(--chat-text)', letterSpacing: '-0.01em' }}>
                           Live Chat
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '3px' }}>
@@ -220,11 +220,11 @@ export default function ChatPanel({ isOpen, onToggle }) {
                       style={{
                         width: '32px', height: '32px', borderRadius: '9px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
-                        color: '#4a6278', cursor: 'pointer', transition: 'all 0.15s',
+                        background: 'var(--chat-input-bg)', border: '1px solid var(--chat-input-border)',
+                        color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.15s',
                       }}
                       onMouseEnter={e => Object.assign(e.currentTarget.style, { background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.3)', color: '#f87171' })}
-                      onMouseLeave={e => Object.assign(e.currentTarget.style, { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.07)', color: '#4a6278' })}
+                      onMouseLeave={e => Object.assign(e.currentTarget.style, { background: 'var(--chat-input-bg)', borderColor: 'var(--chat-input-border)', color: 'var(--text-muted)' })}
                     >
                       <X size={13} />
                     </button>
@@ -267,8 +267,8 @@ export default function ChatPanel({ isOpen, onToggle }) {
                         <MessageSquare size={24} color="rgba(0,229,255,0.2)" />
                       </div>
                       <div>
-                        <p style={{ fontFamily: 'var(--ff-mono)', fontSize: '10px', letterSpacing: '0.15em', color: 'rgba(74,98,120,0.8)', marginBottom: '6px' }}>NO MESSAGES YET</p>
-                        <p style={{ fontSize: '12px', color: 'rgba(74,98,120,0.5)' }}>Say hi to your peer! 👋</p>
+                        <p style={{ fontFamily: 'var(--ff-mono)', fontSize: '10px', letterSpacing: '0.15em', color: 'var(--chat-muted)', marginBottom: '6px' }}>NO MESSAGES YET</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Say hi to your peer! 👋</p>
                       </div>
                     </div>
                   )}
@@ -292,19 +292,19 @@ export default function ChatPanel({ isOpen, onToggle }) {
                             borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                             fontSize: '13px', lineHeight: 1.55, wordBreak: 'break-word',
                             ...(isMe ? {
-                              background: 'linear-gradient(135deg, rgba(0,229,255,0.14), rgba(0,180,216,0.1))',
+                              background: 'var(--chat-msg-own)',
                               border: '1px solid rgba(0,229,255,0.2)',
-                              color: '#dde8f5',
+                              color: 'var(--chat-msg-own-text)',
                               boxShadow: '0 2px 16px rgba(0,229,255,0.07)',
                             } : {
-                              background: 'rgba(255,255,255,0.05)',
-                              border: '1px solid rgba(255,255,255,0.07)',
-                              color: '#94a3b8',
+                              background: 'var(--chat-msg-peer)',
+                              border: '1px solid var(--chat-border)',
+                              color: 'var(--chat-msg-peer-text)',
                             }),
                           }}>
                             {msg.text}
                           </div>
-                          <span style={{ fontFamily: 'var(--ff-mono)', fontSize: '9px', color: 'rgba(74,98,120,0.55)', padding: '0 4px' }}>
+                          <span style={{ fontFamily: 'var(--ff-mono)', fontSize: '9px', color: 'var(--chat-muted)', padding: '0 4px' }}>
                             {formatTime(msg.ts)}
                           </span>
                         </motion.div>
@@ -319,8 +319,8 @@ export default function ChatPanel({ isOpen, onToggle }) {
                 <div style={{
                   flexShrink: 0,
                   padding: '14px 20px 18px',
-                  borderTop: '1px solid rgba(255,255,255,0.05)',
-                  background: 'rgba(0,0,0,0.25)',
+                  borderTop: '1px solid var(--chat-border)',
+                  background: 'transparent',
                 }}>
                   {!chatReady ? (
                     <div style={{
@@ -355,14 +355,14 @@ export default function ChatPanel({ isOpen, onToggle }) {
                             flex: 1, padding: '11px 14px', borderRadius: '14px',
                             resize: 'none', outline: 'none', overflow: 'hidden',
                             fontSize: '13px', lineHeight: '1.5',
-                            background: 'rgba(255,255,255,0.04)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            color: '#dde8f5', fontFamily: 'var(--ff-body)',
+                            background: 'var(--chat-input-bg)',
+                            border: '1px solid var(--chat-input-border)',
+                            color: 'var(--chat-text)', fontFamily: 'var(--ff-body)',
                             transition: 'border-color 0.2s, background 0.2s, box-shadow 0.2s',
-                            caretColor: '#00e5ff',
+                            caretColor: 'var(--cyan)',
                           }}
-                          onFocus={e => Object.assign(e.target.style, { borderColor: 'rgba(0,229,255,0.35)', background: 'rgba(0,229,255,0.03)', boxShadow: '0 0 0 3px rgba(0,229,255,0.07)' })}
-                          onBlur={e => Object.assign(e.target.style, { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', boxShadow: 'none' })}
+                          onFocus={e => Object.assign(e.target.style, { borderColor: 'rgba(99,102,241,0.35)', background: 'rgba(99,102,241,0.03)', boxShadow: '0 0 0 3px rgba(99,102,241,0.07)' })}
+                          onBlur={e => Object.assign(e.target.style, { borderColor: 'var(--chat-input-border)', background: 'var(--chat-input-bg)', boxShadow: 'none' })}
                         />
                         <motion.button
                           id="chat-send-btn"
@@ -375,25 +375,25 @@ export default function ChatPanel({ isOpen, onToggle }) {
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             cursor: input.trim() ? 'pointer' : 'not-allowed',
                             opacity: input.trim() ? 1 : 0.3,
-                            border: '1px solid rgba(0,229,255,0.2)',
+                            border: '1px solid rgba(99,102,241,0.2)',
                             transition: 'all 0.2s',
                             background: input.trim()
-                              ? 'linear-gradient(135deg, #00e5ff, #00b4d8)'
-                              : 'rgba(255,255,255,0.04)',
-                            boxShadow: input.trim() ? '0 0 20px rgba(0,229,255,0.4)' : 'none',
+                              ? 'var(--chat-btn-bg)'
+                              : 'var(--chat-input-bg)',
+                            boxShadow: input.trim() ? '0 0 20px rgba(99,102,241,0.3)' : 'none',
                           }}
                         >
-                          <Send size={15} color={input.trim() ? '#020408' : '#4a6278'} />
+                          <Send size={15} color={input.trim() ? '#fff' : 'var(--muted)'} />
                         </motion.button>
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                        <span style={{ fontFamily: 'var(--ff-mono)', fontSize: '9px', letterSpacing: '0.06em', color: 'rgba(74,98,120,0.45)' }}>
+                        <span style={{ fontFamily: 'var(--ff-mono)', fontSize: '9px', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
                           ↵ ENTER TO SEND
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Lock size={8} color="rgba(57,255,20,0.4)" />
-                          <span style={{ fontFamily: 'var(--ff-mono)', fontSize: '9px', letterSpacing: '0.06em', color: 'rgba(57,255,20,0.4)' }}>E2E ENCRYPTED</span>
+                          <Lock size={8} color="var(--text-muted)" />
+                          <span style={{ fontFamily: 'var(--ff-mono)', fontSize: '9px', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>E2E ENCRYPTED</span>
                         </div>
                       </div>
                     </>

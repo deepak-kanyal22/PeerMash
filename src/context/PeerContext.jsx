@@ -7,6 +7,18 @@ const PeerContext = createContext(null)
 // 64 KB chunks — small enough for data channel reliability
 const CHUNK_SIZE = 64 * 1024
 
+function notifyTransferComplete(fileName, role) {
+  if (!('Notification' in window)) return
+  if (Notification.permission === 'granted') {
+    new Notification('PeerMesh Transfer Complete', {
+      body: role === 'sender'
+        ? `"${fileName}" has been sent successfully.`
+        : `"${fileName}" has been received.`,
+      icon: '/icons/icon-192.svg',
+    })
+  }
+}
+
 // ─── SIGNALING SERVER CONFIG ─────────────────────────────────────────────────
 // Reads from .env (VITE_PEER_HOST / VITE_PEER_PORT / VITE_PEER_PATH).
 // Falls back to the public PeerJS cloud server if env vars are not set.
@@ -180,6 +192,7 @@ export function PeerProvider({ children }) {
         try {
           conn.send({ type: 'done' })
           setStatus('done')
+          notifyTransferComplete(fileNameRef.current, 'sender')
         } catch (_) {}
         return
       }
@@ -259,6 +272,11 @@ export function PeerProvider({ children }) {
     roleRef.current = 'sender'
     setMessages([])
     setChatReady(false)
+
+    // Request notification permission for transfer complete alerts
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
 
     // Generate a fresh 16-byte salt each time we create a password-protected room
     saltRef.current = passphraseRef.current
@@ -364,6 +382,11 @@ export function PeerProvider({ children }) {
     chunksRef.current        = []
     bytesReceivedRef.current = 0
 
+    // Request notification permission for transfer complete alerts
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+
     const peer = new Peer(undefined, PEER_SERVER)
     peerRef.current = peer
 
@@ -461,6 +484,7 @@ export function PeerProvider({ children }) {
           document.body.removeChild(a)
           URL.revokeObjectURL(url)
           setStatus('done')
+          notifyTransferComplete(fileNameRef.current, 'receiver')
 
         } else if (msg.type === 'cancelled') {
           setErrorMsg('Transfer Cancelled')

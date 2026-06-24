@@ -2,19 +2,19 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
 import { usePeer } from '../context/PeerContext'
-import { 
-  Download, 
-  Lock, 
-  Check, 
-  X, 
-  Shield, 
-  Wifi, 
-  Loader2, 
-  File, 
-  FileArchive, 
-  Image, 
-  Video, 
-  Music, 
+import {
+  Download,
+  Lock,
+  Check,
+  X,
+  Shield,
+  Wifi,
+  Loader2,
+  File,
+  FileArchive,
+  Image,
+  Video,
+  Music,
   FileText,
   User,
   Eye,

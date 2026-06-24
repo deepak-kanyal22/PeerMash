@@ -55,9 +55,9 @@ export default function Progress() {
         <div
           className="rounded-2xl p-6 relative overflow-hidden"
           style={{
-            background: 'rgba(4,12,20,0.75)',
+            background: 'var(--glass)',
             backdropFilter: 'blur(24px)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            border: '1px solid var(--glass-border)',
             boxShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)',
           }}
         >
@@ -195,15 +195,15 @@ export default function Progress() {
               <div
                 className="rounded-xl p-3.5"
                 style={{
-                  background: 'rgba(0,229,255,0.04)',
-                  border: '1px solid rgba(0,229,255,0.1)',
+                  background: 'rgba(99,102,241,0.06)',
+                  border: '1px solid rgba(99,102,241,0.12)',
                 }}
               >
                 <div className="flex items-center gap-1.5 mb-1">
-                  <Zap size={10} className="text-cyan-400" />
+                  <Zap size={10} className="text-indigo-400" />
                   <span
                     className="text-[9px]"
-                    style={{ fontFamily: 'var(--ff-mono)', letterSpacing: '0.12em', color: 'rgba(0,229,255,0.6)' }}
+                    style={{ fontFamily: 'var(--ff-mono)', letterSpacing: '0.12em', color: 'rgba(99,102,241,0.7)' }}
                   >
                     SPEED
                   </span>
@@ -219,15 +219,15 @@ export default function Progress() {
               <div
                 className="rounded-xl p-3.5"
                 style={{
-                  background: 'rgba(123,47,255,0.04)',
-                  border: '1px solid rgba(123,47,255,0.12)',
+                  background: 'rgba(99,102,241,0.04)',
+                  border: '1px solid rgba(99,102,241,0.1)',
                 }}
               >
                 <div className="flex items-center gap-1.5 mb-1">
-                  <BarChart2 size={10} className="text-violet-400" />
+                  <BarChart2 size={10} className="text-indigo-400" />
                   <span
                     className="text-[9px]"
-                    style={{ fontFamily: 'var(--ff-mono)', letterSpacing: '0.12em', color: 'rgba(123,47,255,0.7)' }}
+                    style={{ fontFamily: 'var(--ff-mono)', letterSpacing: '0.12em', color: 'rgba(99,102,241,0.7)' }}
                   >
                     PROGRESS
                   </span>
@@ -246,8 +246,8 @@ export default function Progress() {
           {isConnecting && (
             <div className="flex items-center gap-2.5 mt-5 py-3 px-4 rounded-xl"
               style={{
-                background: 'rgba(0,229,255,0.03)',
-                border: '1px solid rgba(0,229,255,0.08)',
+                background: 'rgba(99,102,241,0.04)',
+                border: '1px solid rgba(99,102,241,0.1)',
               }}
             >
               <div className="flex gap-1">
@@ -263,7 +263,7 @@ export default function Progress() {
               </div>
               <span
                 className="text-xs"
-                style={{ fontFamily: 'var(--ff-mono)', color: 'rgba(0,229,255,0.5)', letterSpacing: '0.1em' }}
+                style={{ fontFamily: 'var(--ff-mono)', color: 'rgba(99,102,241,0.6)', letterSpacing: '0.1em' }}
               >
                 {status === 'waiting' ? 'WAITING FOR PEER…' :
                  status === 'awaiting_approval' ? 'AWAITING APPROVAL…' :

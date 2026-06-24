@@ -2,10 +2,12 @@ import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { usePeer } from '../context/PeerContext'
-import { Home, Send, Download, Activity } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
+import { Home, Send, Download, Activity, Sun, Moon } from 'lucide-react'
 
 export default function NavBar() {
   const { status } = usePeer()
+  const { theme, toggleTheme } = useTheme()
   const location = useLocation()
 
   const hasActiveTransfer = status && status !== 'idle'
@@ -22,12 +24,12 @@ export default function NavBar() {
 
   return (
     <header className="sticky top-4 z-50 w-full max-w-4xl mx-auto px-4 select-none">
-      <div className="glass-nav rounded-2xl border border-white/8 backdrop-blur-xl bg-[#04050a]/70 py-3 px-5 flex items-center justify-between shadow-lg shadow-black/40">
+      <div className="glass-nav rounded-2xl border border-white/8 backdrop-blur-xl py-3 px-5 flex items-center justify-between shadow-lg shadow-black/40">
         <NavLink to="/" className="flex items-center gap-2.5 group">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-cyan-400 flex items-center justify-center font-bold text-white shadow-glow-sm group-hover:scale-105 transition-transform duration-300">
             P
           </div>
-          <span className="text-xl font-bold tracking-tight text-white group-hover:text-indigo-300 transition-colors duration-200">
+          <span className={`text-xl font-bold tracking-tight group-hover:text-indigo-300 transition-colors duration-200 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             Peer<span className="gradient-text font-extrabold">Mesh</span>
           </span>
         </NavLink>
@@ -45,8 +47,8 @@ export default function NavBar() {
                 className={({ isActive }) =>
                   `relative px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 outline-none flex items-center gap-2 group ${
                     isActive
-                      ? 'text-white font-bold'
-                      : 'text-gray-400 hover:text-white hover:bg-white/3'
+                      ? 'text-indigo-600 dark:text-white font-bold'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/3'
                   }`
                 }
               >
@@ -77,6 +79,17 @@ export default function NavBar() {
               </NavLink>
             )
           })}
+
+          {/* Theme Toggle */}
+          <motion.button
+            whileHover={{ scale: 1.12 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={toggleTheme}
+            className="ml-1 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </motion.button>
         </nav>
       </div>
     </header>
