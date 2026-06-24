@@ -264,8 +264,9 @@ function WebRTCVisualizer() {
         ctx.fillStyle = '#ffffff'
         ctx.fill()
 
+        const isLight = document.documentElement.classList.contains('light')
         ctx.font = 'bold 9px IBM Plex Mono, monospace'
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'
+        ctx.fillStyle = isLight ? 'rgba(26, 26, 46, 0.4)' : 'rgba(255, 255, 255, 0.3)'
         ctx.textAlign = 'center'
         ctx.fillText(label, nx, ny + 30)
       }
@@ -497,8 +498,11 @@ function InteractiveNetworkMesh() {
         ctx.fill()
 
         // Monospace text label
+        const isLight = document.documentElement.classList.contains('light')
         ctx.font = 'bold 8.5px IBM Plex Mono, monospace'
-        ctx.fillStyle = isHovered ? '#00e5ff' : 'rgba(255, 255, 255, 0.4)'
+        ctx.fillStyle = isHovered 
+          ? (isLight ? '#4f46e5' : '#00e5ff') 
+          : (isLight ? 'rgba(26, 26, 46, 0.5)' : 'rgba(255, 255, 255, 0.4)')
         ctx.textAlign = 'center'
         ctx.fillText(n.label, n.x, n.y + 24)
       })

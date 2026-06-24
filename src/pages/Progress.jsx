@@ -89,11 +89,10 @@ export default function Progress() {
 
               <div className="min-w-0">
                 <div
-                  className="text-[9px] font-semibold mb-0.5"
+                  className={`text-[9px] font-semibold mb-0.5 ${role === 'sender' ? 'text-cyan-400' : 'text-indigo-400'}`}
                   style={{
                     fontFamily: 'var(--ff-mono)',
                     letterSpacing: '0.15em',
-                    color: role === 'sender' ? 'rgba(0,229,255,0.7)' : 'rgba(123,47,255,0.8)',
                   }}
                 >
                   {role === 'sender' ? '↑ SENDING' : '↓ RECEIVING'}
@@ -115,11 +114,11 @@ export default function Progress() {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg"
-                  style={{ background: 'rgba(57,255,20,0.08)', border: '1px solid rgba(57,255,20,0.2)' }}
+                  style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}
                   title="Connection is End-to-End Encrypted"
                 >
                   <Lock size={12} className="text-emerald-400" />
-                  <span style={{ fontFamily: 'var(--ff-mono)', fontSize: '10px', fontWeight: 600, color: 'rgba(57,255,20,0.8)' }}>
+                  <span className="text-emerald-400" style={{ fontFamily: 'var(--ff-mono)', fontSize: '10px', fontWeight: 600 }}>
                     E2EE
                   </span>
                 </motion.div>
@@ -143,7 +142,7 @@ export default function Progress() {
                   style={{
                     fontFamily: 'var(--ff-mono)',
                     letterSpacing: '0.12em',
-                    color: isDone ? 'rgba(57,255,20,0.6)' : isError ? 'rgba(239,68,68,0.6)' : 'rgba(74,98,120,0.9)',
+                    color: isDone ? 'var(--lime)' : isError || isCancelled ? '#ef4444' : 'var(--text-muted)',
                   }}
                 >
                   {isDone ? 'COMPLETE' : isError ? 'ABORTED' : isCancelled ? 'CANCELLED' : 'IN PROGRESS'}
@@ -203,7 +202,7 @@ export default function Progress() {
                   <Zap size={10} className="text-indigo-400" />
                   <span
                     className="text-[9px]"
-                    style={{ fontFamily: 'var(--ff-mono)', letterSpacing: '0.12em', color: 'rgba(99,102,241,0.7)' }}
+                    style={{ fontFamily: 'var(--ff-mono)', letterSpacing: '0.12em', color: 'var(--text-muted)' }}
                   >
                     SPEED
                   </span>
@@ -227,7 +226,7 @@ export default function Progress() {
                   <BarChart2 size={10} className="text-indigo-400" />
                   <span
                     className="text-[9px]"
-                    style={{ fontFamily: 'var(--ff-mono)', letterSpacing: '0.12em', color: 'rgba(99,102,241,0.7)' }}
+                    style={{ fontFamily: 'var(--ff-mono)', letterSpacing: '0.12em', color: 'var(--text-muted)' }}
                   >
                     PROGRESS
                   </span>
@@ -263,7 +262,7 @@ export default function Progress() {
               </div>
               <span
                 className="text-xs"
-                style={{ fontFamily: 'var(--ff-mono)', color: 'rgba(99,102,241,0.6)', letterSpacing: '0.1em' }}
+                style={{ fontFamily: 'var(--ff-mono)', color: 'var(--text-muted)', letterSpacing: '0.1em' }}
               >
                 {status === 'waiting' ? 'WAITING FOR PEER…' :
                  status === 'awaiting_approval' ? 'AWAITING APPROVAL…' :
@@ -358,7 +357,7 @@ export default function Progress() {
               animate={{ opacity: 1 }}
               className="mt-5 space-y-3"
             >
-              <div className="flex items-center gap-2.5 text-xs" style={{ color: 'rgba(74,98,120,0.8)' }}>
+              <div className="flex items-center gap-2.5 text-xs" style={{ color: 'var(--text-muted)' }}>
                 <span
                   className="inline-flex w-2 h-2 rounded-full"
                   style={{ background: 'var(--cyan)', boxShadow: '0 0 8px var(--cyan)', animation: 'ping 1s cubic-bezier(0,0,0.2,1) infinite' }}
@@ -382,7 +381,7 @@ export default function Progress() {
         {isTransferring && (
           <p
             className="text-center text-[9px]"
-            style={{ fontFamily: 'var(--ff-mono)', color: 'rgba(74,98,120,0.5)', letterSpacing: '0.1em' }}
+            style={{ fontFamily: 'var(--ff-mono)', color: 'var(--text-muted)', opacity: 0.7, letterSpacing: '0.1em' }}
           >
             P2P ENCRYPTED · NO DATA PASSES THROUGH ANY SERVER
           </p>

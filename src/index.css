@@ -38,6 +38,14 @@
   --badge-color: var(--cyan);
   --scrollbar-thumb: rgba(0,229,255,0.15);
 
+  /* Chat toggle variables */
+  --chat-toggle-bg: rgba(0,229,255,0.06);
+  --chat-toggle-bg-active: rgba(0,229,255,0.12);
+  --chat-toggle-border: rgba(0,229,255,0.15);
+  --chat-toggle-border-active: rgba(0,229,255,0.3);
+  --chat-toggle-color: rgba(0,229,255,0.85);
+  --chat-toggle-glow: rgba(0,229,255,0.2);
+
   /* Chat panel */
   --chat-bg: rgba(3,6,12,0.97);
   --chat-border: rgba(255,255,255,0.05);
@@ -118,9 +126,22 @@ html.light {
   --chat-msg-peer: rgba(0,0,0,0.03);
   --chat-msg-peer-text: #374151;
   --chat-btn-bg: linear-gradient(135deg, #6366f1, #4f46e5);
+
+  /* Chat toggle variables */
+  --chat-toggle-bg: rgba(99,102,241,0.06);
+  --chat-toggle-bg-active: rgba(99,102,241,0.12);
+  --chat-toggle-border: rgba(99,102,241,0.15);
+  --chat-toggle-border-active: rgba(99,102,241,0.3);
+  --chat-toggle-color: #6366f1;
+  --chat-toggle-glow: rgba(99,102,241,0.15);
 }
 
-html.light .text-white { color: #1a1a2e !important; }
+html.light .text-white:not(.text-white-force) { color: #1a1a2e !important; }
+html.light .text-white-force { color: #ffffff !important; }
+html.light ::placeholder { color: #9ca3af !important; opacity: 1 !important; }
+html.light input::placeholder { color: #9ca3af !important; opacity: 1 !important; }
+html.light textarea::placeholder { color: #9ca3af !important; opacity: 1 !important; }
+
 
 /* ── Base resets ──────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
@@ -244,7 +265,7 @@ html.light ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); }
 html.light ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb); }
 
 /* ── Light Theme: Only override text-white (most common issue) ── */
-html.light .text-white { color: #1a1a2e !important; }
+html.light .text-white:not(.text-white-force) { color: #1a1a2e !important; }
 html.light .text-gray-100 { color: #374151 !important; }
 html.light .text-gray-200 { color: #374151 !important; }
 html.light .text-gray-300 { color: #4b5563 !important; }
@@ -253,8 +274,17 @@ html.light .text-gray-500 { color: #9ca3af !important; }
 html.light .text-gray-550 { color: #9ca3af !important; }
 html.light .text-gray-600 { color: #9ca3af !important; }
 html.light .text-gray-700 { color: #9ca3af !important; }
+html.light .text-emerald-400 { color: #059669 !important; }
+html.light .text-amber-400 { color: #d97706 !important; }
+html.light .text-indigo-400 { color: #4f46e5 !important; }
+html.light .text-indigo-300 { color: #6366f1 !important; }
+html.light .text-cyan-400 { color: #0891b2 !important; }
+html.light .text-cyan { color: #0891b2 !important; }
+html.light .text-lime { color: #16a34a !important; }
 html.light .bg-black\/40 { background: rgba(255,255,255,0.6) !important; }
 html.light .bg-black\/75 { background: rgba(255,255,255,0.85) !important; }
+html.light .bg-\[\#040810\]\/40 { background: rgba(255, 255, 255, 0.75) !important; }
+html.light .bg-\[\#040a14\]\/30 { background: rgba(255, 255, 255, 0.6) !important; }
 html.light .bg-black\/5 { background: rgba(0,0,0,0.04) !important; }
 
 /* Light background tints in light mode become subtle dark tints */

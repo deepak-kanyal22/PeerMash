@@ -96,13 +96,13 @@ export default function ChatPanel({ isOpen, onToggle }) {
           outline: 'none',
           transition: 'all 0.2s',
           background: isOpen
-            ? 'rgba(0,229,255,0.12)'
-            : 'rgba(0,229,255,0.06)',
+            ? 'var(--chat-toggle-bg-active)'
+            : 'var(--chat-toggle-bg)',
           borderWidth: '1px',
           borderStyle: 'solid',
-          borderColor: isOpen ? 'rgba(0,229,255,0.3)' : 'rgba(0,229,255,0.15)',
-          color: 'rgba(0,229,255,0.85)',
-          boxShadow: isOpen ? '0 0 18px rgba(0,229,255,0.2)' : 'none',
+          borderColor: isOpen ? 'var(--chat-toggle-border-active)' : 'var(--chat-toggle-border)',
+          color: 'var(--chat-toggle-color)',
+          boxShadow: isOpen ? '0 0 18px var(--chat-toggle-glow)' : 'none',
         }}
       >
         <MessageSquare size={12} />

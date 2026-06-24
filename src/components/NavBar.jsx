@@ -26,7 +26,7 @@ export default function NavBar() {
     <header className="sticky top-4 z-50 w-full max-w-4xl mx-auto px-4 select-none">
       <div className="glass-nav rounded-2xl border border-white/8 backdrop-blur-xl py-3 px-5 flex items-center justify-between shadow-lg shadow-black/40">
         <NavLink to="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-cyan-400 flex items-center justify-center font-bold text-white shadow-glow-sm group-hover:scale-105 transition-transform duration-300">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-cyan-400 flex items-center justify-center font-bold text-white-force shadow-glow-sm group-hover:scale-105 transition-transform duration-300">
             P
           </div>
           <span className={`text-xl font-bold tracking-tight group-hover:text-indigo-300 transition-colors duration-200 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
